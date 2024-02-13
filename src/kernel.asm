@@ -1,24 +1,32 @@
+BITS 16           ; Set the mode to 16-bit
+
 section .text
     global _start
 
 _start:
-    ; Your bootloader will load the kernel at 0x1000, adjust as needed
-    mov     rsp, 0x10000
-    mov     rdi, msg
-    call    print_message
+    ; Set video mode
+    mov ah, 00h    ; Function to set video mode
+    mov al, 03h    ; Video mode 80x25 color text
+    int 10h        ; BIOS interrupt for video services
 
-    ; Infinite loop
-    hlt
+    mov si, hello_msg
+    call print_string
 
-print_message:
-    ; System call to write to standard output
-    mov     rax, 1
-    mov     rsi, rdi
-    mov     rdx, msg_len
-    mov     rdi, 1  ; File descriptor: STDOUT
-    syscall
+    ; Halt the system
+    cli            ; Disable interrupts
+    hlt            ; Halt the CPU
+
+print_string:
+    lodsb          ; Load the next byte from SI into AL
+    test al, al    ; Check if AL is zero (end of string)
+    jz .done       ; If zero, we're done
+    mov ah, 0x0E   ; Function to print character
+    mov bh, 0x00   ; Page number
+    mov bl, 0x07   ; Text attribute (white on black)
+    int 10h        ; BIOS interrupt for video services
+    jmp print_string   ; Continue printing
+
+.done:
     ret
 
-section .data
-    msg db 'Disk startup successful', 0
-    msg_len equ $ - msg
+hello_msg db "Disk startup successful", 0   ; Null-terminated string
